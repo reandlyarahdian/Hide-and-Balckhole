@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class Changing : MonoBehaviour
 {
@@ -48,5 +49,15 @@ public class Changing : MonoBehaviour
     public void ToogleBoot(bool test)
     {
         bootObj.SetActive(test);
+    }
+
+    public void BlackholeScene()
+    {
+        SceneManager.LoadScene("BlackHole");
+    }
+    
+    public void HideNSeekScene()
+    {
+        SceneManager.LoadScene("HideNSeek");
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Cinemachine;
 
 public class Player : MonoBehaviour
 {
@@ -14,6 +15,13 @@ public class Player : MonoBehaviour
     float angle;
     Vector3 velocity;
 
+    private void Awake()
+    {
+        CinemachineFreeLook freeLook = FindObjectOfType<CinemachineFreeLook>();
+        freeLook.Follow = transform;
+        freeLook.LookAt = transform;
+    }
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -21,7 +29,7 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        Vector3 input = new Vector3(Input.GetAxis("Vertical"), 0, Input.GetAxis("Horizontal")).normalized;
+        Vector3 input = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")).normalized;
         float InputMagintude = input.magnitude;
         smoothInputMagnitude = Mathf.SmoothDamp(smoothInputMagnitude, InputMagintude, ref refVelocity, SmoothTurn);
 
