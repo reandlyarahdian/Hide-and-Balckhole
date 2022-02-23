@@ -4,70 +4,117 @@ using UnityEngine;
 
 public class EnemySight : MonoBehaviour
 {
-    public bool spread;
     [SerializeField]
-    private Player player;
+    private LineRenderer alertLine;
     [SerializeField]
-    private Transform SightFarR, SightFarL, SightR, SightL;
+    private LineRenderer warningLine;
     [SerializeField]
-    private float viewFar, ViewNear;
-    [SerializeField]
-    LayerMask mask;
-    public Material yellow, red, def;
-    private float angleSightF, angleSightN;
     private MeshRenderer mesh;
-    bool seeFar;
-    bool seeNear;
-
     [SerializeField]
-    private EnemySight[] enemies;
+    private GameObject @object;
+    [SerializeField]
+    private LayerMask mask;
+
+    private float warningRange = 7f;
+    private float alertRange = 3f ;
+
+    private float alertAngle;
+    private float warningAngle;
+
+    private List<EnemySight> enemies = new List<EnemySight>();
+
+    private Coroutine Alert;
+    private Coroutine Warning;
+
+    public bool Test;
+
     private void Awake()
     {
-        enemies = FindObjectsOfType<EnemySight>();
+        foreach(EnemySight enemy in @object.GetComponentsInChildren<EnemySight>())
+        {
+            enemies.Add(enemy);
+        }
     }
-
-    private void Start()
-    {
-        mesh = GetComponent<MeshRenderer>();
-        def = mesh.material;
-        player = FindObjectOfType<Player>();
-        angleSightF = Vector3.Angle(SightFarR.position, SightFarL.position);
-        angleSightN = Vector3.Angle(SightR.position, SightL.position);
-    }
-
 
     private void Update()
     {
-        seeFar = SeePlayer(angleSightF, viewFar) && !SeePlayer(angleSightN, ViewNear);
-        seeNear = SeePlayer(angleSightN, ViewNear);
-        if (seeFar && !spread) mesh.material = yellow;
-        else if (seeNear || spread) { Spread(); mesh.material = red;}
-        else {mesh.material = def; spread = false; }   
-    }
+        warningLine.SetPosition(0, transform.position);
+        warningLine.SetPosition(1, transform.position + transform.TransformDirection(new Vector3(0.5f, 0, 1f)) * warningRange);
+        warningLine.SetPosition(2, transform.position);
+        warningLine.SetPosition(3, transform.position + transform.TransformDirection(new Vector3(-0.5f, 0, 1f)) * warningRange);
 
-    void Spread()
-    {
-        foreach(EnemySight enemy in GetClosestEnemy(enemies))
-        {
-            enemy.spread = true;
-        }
-    }
+        alertLine.SetPosition(0, transform.position);
+        alertLine.SetPosition(1, transform.position + transform.TransformDirection(new Vector3(0.5f, -0.1f, 1f)) * alertRange);
+        alertLine.SetPosition(2, transform.position);
+        alertLine.SetPosition(3, transform.position + transform.TransformDirection(new Vector3(-0.5f, -0.1f, 1f)) * alertRange);
 
-    private bool SeePlayer(float angleSight, float viewDistance)
-    {
-        if(Vector3.Distance(player.transform.position, transform.position) < viewDistance)
+        alertAngle = MeasureAngle(alertLine.GetPosition(1),
+            alertLine.GetPosition(3));
+        warningAngle = MeasureAngle(warningLine.GetPosition(1),
+            warningLine.GetPosition(3));
+
+        if (SeePlayer(warningAngle, warningRange) || Test)
         {
-            Vector3 dir = (player.transform.position - transform.position).normalized;
-            float angle = Vector3.Angle(transform.forward, dir);
-            if(angle < angleSight / 2)
+            if (SeePlayer(alertAngle, alertRange) || Test)
             {
-                if(!Physics.Linecast(transform.position, player.transform.position, mask))
-                {
-                    return true;
-                }
+                AlertState();
+            }
+            else if (mesh.material.color != Color.red)
+            {
+                WarningState();
             }
         }
-        return false;
+    }
+
+    private float MeasureAngle(Vector3 target, Vector3 target1)
+    {
+        Vector3 A = target - transform.position;
+        Vector3 B = target1 - transform.position;
+        float angle = Vector3.Angle(B,A);
+        return angle;
+    }
+
+    public void WarningState()
+    {
+        Test = false;
+        mesh.material.color = Color.yellow;
+        enemies.Remove(this);
+
+        if(Warning != null)
+        {
+            this.StopCoroutine(Warning);
+        }
+
+        Warning = this.StartCoroutine(WarningCor(10f));
+    }
+
+    IEnumerator WarningCor(float second)
+    {
+        yield return new WaitForSeconds(second);
+        mesh.material.color = Color.white;
+    }
+
+    public void AlertState()
+    {
+        if (!enemies.Contains(this))
+        {
+            enemies.Add(this);
+        }
+
+        mesh.material.color = Color.red;
+
+        if(Alert != null)
+        {
+            this.StopCoroutine(Alert);
+        }
+        
+        Alert = this.StartCoroutine(AlertCor());
+
+        foreach(var item in GetClosestEnemy(enemies.ToArray()))
+        {
+            item.Test = true;
+        }
+
     }
 
     List<EnemySight> GetClosestEnemy(EnemySight[] enemies)
@@ -77,12 +124,39 @@ public class EnemySight : MonoBehaviour
         {
             Vector3 directionToTarget = enemies[i].transform.position - transform.position;
             float dToTarget = directionToTarget.magnitude;
-            if(dToTarget < 10f)
+            if (dToTarget < 10f)
             {
                 bestTarget.Add(enemies[i]);
             }
         }
 
         return bestTarget;
+    }
+
+    IEnumerator AlertCor()
+    {
+        if (!SeePlayer(alertAngle, alertRange))
+        {
+            yield return new WaitForSeconds(3f);
+            WarningState();
+        }
+    }
+
+    private bool SeePlayer(float angle, float range)
+    {
+        if(Vector3.Distance(Player.instance.transform.position, transform.position) < range)
+        {
+            Vector3 dir = (Player.instance.transform.position - transform.position);
+            float angleP = Vector3.Angle(transform.forward, dir);
+            if(angleP < angle /2)
+            {
+                if(!Physics.Linecast(transform.position, Player.instance.transform.position, mask))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

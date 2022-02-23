@@ -15,9 +15,12 @@ public class Player : MonoBehaviour
     float angle;
     Vector3 velocity;
 
+    public static Player instance;
+
     private void Awake()
     {
-        CinemachineFreeLook freeLook = FindObjectOfType<CinemachineFreeLook>();
+        instance = this;
+        CinemachineVirtualCamera freeLook = FindObjectOfType<CinemachineVirtualCamera>();
         freeLook.Follow = transform;
         freeLook.LookAt = transform;
     }
